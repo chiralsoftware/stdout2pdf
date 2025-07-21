@@ -54,14 +54,32 @@ public final class Stdout2Ps implements Runnable {
     private void outputPage(OutputStream os, List<Line> allLines, int startLine, int endLine, int pageNumber) throws IOException {
         // start the page
         os.write(("%%Page: " + pageNumber + " " + pageNumber + "\n"
-                + "newpath\n"
-                + "72 700 moveto\n").getBytes());
+                + "newpath\n").getBytes());
+        if(header != null && ! header.isBlank()) {
+            os.write(("gsave\n"
+                    + "/Helvetica-Bold findfont 14 scalefont setfont\n"
+                    + "/headertext (" + escapePostscriptString(header) + ") def\n"
+                            + "currentpagedevice /PageSize get aload pop  % Puts [width height] array on stack, then width and height\n" +
+                            "/PageHeight exch def                     % Pop height and define PageHeight\n" +
+                            "/PageWidth exch def  "
+                            + "headertext stringwidth pop\n"
+                            + "PageWidth exch sub 2 div\n"
+                            + "PageHeight 60 sub moveto\n"
+                            + "headertext show\n"
+                            + "grestore\n").getBytes());
+        }
+        os.write(("72 700 moveto\n").getBytes());
         for(int lineNumber = startLine; lineNumber < endLine; lineNumber++) {
             final Line line = allLines.get(lineNumber);
             for(Chunk c : line.chunks()) {
                 final Color color = c.color();
                 os.write((color.r() + " " + color.g() + " " + color.b() + " setrgbcolor\n").getBytes());
                 os.write(("(" + escapePostscriptString(c.text()) + ") show\n").getBytes());
+            }
+            if(line.overflow()) {
+                os.write(("0 0 0 setrgbcolor\n"
+                        + "( ...) show\n").getBytes());
+                
             }
             os.write(("72 " + (700 - (lineNumber - startLine + 1) * 12) + " moveto\n").getBytes());
         }
