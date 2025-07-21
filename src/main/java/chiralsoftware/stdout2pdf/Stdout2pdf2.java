@@ -216,6 +216,7 @@ public class Stdout2pdf2 implements Runnable {
                     color.r(), color.g(), color.b(), 
                     escapeString(c.text())).getBytes());
         }
+        if(line.overflow()) currentContent.write(" 0 0 0 rg\n( ...) Tj\n".getBytes());
         currentContent.write("T*\n".getBytes());
         return 0;
     }
