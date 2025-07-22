@@ -7,24 +7,53 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import static java.lang.System.err;
+import static java.lang.System.exit;
+
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import picocli.CommandLine;
+import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 /**
- * Convert ANSI text input to PostScript output
+ * Convert ANSI text input to PostScript output.
+ * This needs a reflect-config.json file to compile to native:
+ [
+ {
+ "name": "chiralsoftware.stdout2pdf.Stdout2Ps",
+ "allDeclaredConstructors": true,
+ "allPublicConstructors": true,
+ "allDeclaredMethods": true,
+ "allPublicMethods": true,
+ "allDeclaredFields": true,
+ "allPublicFields": true
+ },
+ {
+ "name": "picocli.CommandLine$AutoHelpMixin",
+ "allDeclaredConstructors": true,
+ "allPublicConstructors": true,
+ "allDeclaredMethods": true,
+ "allPublicMethods": true,
+ "allDeclaredFields": true,
+ "allPublicFields": true
+ }
+ ]
+
+ *
  */
-@CommandLine.Command(name = "Stdout2ps", mixinStandardHelpOptions = true, version = "1.0",
-         description = "Converts ANSI-colored text from stdin or file to PS")
+@Command(name = "Stdout2ps", mixinStandardHelpOptions = true, version = "1.0",
+         description = "Converts ANSI-colored text from stdin or file to PostScript")
 public final class Stdout2Ps implements Runnable {
 
-    @CommandLine.Parameters(index = "0", arity = "0..1", description = "Input log file (optional; defaults to stdin)")
-    private String inputFile;
+    @Parameters(index = "0", arity = "0..1", description = "Input file (optional; defaults to stdin)")
+    public String inputFile;
 
-    @CommandLine.Parameters(index = "1", arity = "1", description = "Output PDF file")
-    private String outputFile;
+    @Parameters(index = "1", arity = "0..1", description = "Output PDF file (optiona; defaults to stdout)")
+    public String outputFile;
 
-    @CommandLine.Option(names = {"-h", "--header"}, description = "Optional header text for the PDF")
-    private String header;
+    @Option(names = {"-h", "--header"}, description = "Optional header text for the PDF")
+    public String header;
     
     private static final int linesPerPage = 55;
     
@@ -91,37 +120,37 @@ public final class Stdout2Ps implements Runnable {
             err.println("null argument");
             return;
         }
-        try (OutputStream os = new FileOutputStream(outputFile)) {
-            os.write("%!PS-Adobe-3.0\n".getBytes());
-            os.write(("% Define a procedure to move to the next line\n" +
-                "% Assumes a line spacing of 1.2 times the font size\n" +
-                "/nextline {\n" +
-                "    currentpoint pop           % Get current X, discard Y\n" +
-                "    -14 rmoveto                % Move down 14 points (adjust as needed)\n" +
-                "} def\n"
-                + "/Courier findfont 9 scalefont setfont\n").getBytes());
-            
+        final OutputStream os =
+                outputFile == null ? System.out : new FileOutputStream(outputFile);
+        os.write("%!PS-Adobe-3.0\n".getBytes());
+        os.write(("% Define a procedure to move to the next line\n" +
+            "% Assumes a line spacing of 1.2 times the font size\n" +
+            "/nextline {\n" +
+            "    currentpoint pop           % Get current X, discard Y\n" +
+            "    -14 rmoveto                % Move down 14 points (adjust as needed)\n" +
+            "} def\n"
+            + "/Courier findfont 9 scalefont setfont\n").getBytes());
 
-            if(allLines.isEmpty()) {
-                err.println("No lines read");
-            }
 
-            final int numberOfFullPages = allLines.size() / linesPerPage;
-            
-            // output all the full pages first. This could be zero full pages
-            for(int pageNumber = 0; pageNumber < numberOfFullPages; pageNumber++) {
-                outputPage(os, allLines, pageNumber * linesPerPage, 
-                        pageNumber * linesPerPage + linesPerPage, pageNumber + 1);
-                
-            }
-            // if there is a partial page output that too
-            if(allLines.size() % linesPerPage != 0) {
-                outputPage(os, allLines, numberOfFullPages * linesPerPage, allLines.size(), numberOfFullPages + 1);
-            }
-    
-            // Trailer
-            os.write(("% the end\n").getBytes());
+        if(allLines.isEmpty()) {
+            err.println("No lines read");
         }
+
+        final int numberOfFullPages = allLines.size() / linesPerPage;
+
+        // output all the full pages first. This could be zero full pages
+        for(int pageNumber = 0; pageNumber < numberOfFullPages; pageNumber++) {
+            outputPage(os, allLines, pageNumber * linesPerPage,
+                    pageNumber * linesPerPage + linesPerPage, pageNumber + 1);
+
+        }
+        // if there is a partial page output that too
+        if(allLines.size() % linesPerPage != 0) {
+            outputPage(os, allLines, numberOfFullPages * linesPerPage, allLines.size(), numberOfFullPages + 1);
+        }
+
+        // Trailer
+        os.write(("%%EOF\n").getBytes());
     }
 
     private List<Line> readInput() throws IOException {
@@ -130,7 +159,7 @@ public final class Stdout2Ps implements Runnable {
         if (inputFile != null) {
             br = new BufferedReader(new FileReader(inputFile));
         } else {
-            br = new BufferedReader(new InputStreamReader(System.in));
+            br = new BufferedReader(new InputStreamReader(System.in,  StandardCharsets.UTF_8));
         }
         try {
             allLines = PageMaker.makeLines(br);
@@ -144,7 +173,7 @@ public final class Stdout2Ps implements Runnable {
 
     public static void main(String[] args) {
         int exitCode = new CommandLine(new Stdout2Ps()).execute(args);
-        System.exit(exitCode);
+        exit(exitCode);
     }
 
     @Override
@@ -152,9 +181,8 @@ public final class Stdout2Ps implements Runnable {
         try {
             final List<Line> allLines = readInput();
             generatePs(allLines);
-            System.out.println("PS generated: " + outputFile);
         } catch (IOException e) {
-            System.err.println("Error: " + e.getMessage());
+            err.println("Error: " + e.getMessage());
         }
     }
 
