@@ -22,6 +22,16 @@ public final class checkit {
             out.println("{input} the input");
             exit(0);
     }
+
+    private static String removeTrailingNewlines(String input) {
+        int endIndex = input.length();
+
+        while (endIndex > 0 && input.charAt(endIndex - 1) == '\n') {
+            endIndex--;
+        }
+
+        return input.substring(0, endIndex);
+    }
    
     public static void main(String[] args) throws Exception {
         if(args.length != 4) usage();
@@ -46,7 +56,8 @@ public final class checkit {
             lines++;
         }
         final String message = lines == 0 ? emptyMessage : presentMessage;
-        out.println(message.replace("{lines}", Integer.toString(lines)).replace("{input}", result));
+        out.println(message.replace("{lines}", Integer.toString(lines)).
+                replace("{input}", removeTrailingNewlines(result.toString())));
         exit(lines == 0 ? 0 : 1);
     }
     

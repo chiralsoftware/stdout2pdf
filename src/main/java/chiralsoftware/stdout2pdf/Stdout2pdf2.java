@@ -9,6 +9,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import static java.lang.System.err;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Command(name = "Stdout2pdf", mixinStandardHelpOptions = true, version = "1.0",
          description = "Converts ANSI-colored text from stdin or file to PDF directly (no libs).")
@@ -35,16 +37,15 @@ public class Stdout2pdf2 implements Runnable {
 
     private static final Map<String, float[]> COLOR_MAP;
     static {
-        Map<String, float[]> tempMap = new HashMap<>();
-        tempMap.put("30", new float[]{0f, 0f, 0f});       // black
-        tempMap.put("31", new float[]{1f, 0f, 0f});       // red
-        tempMap.put("32", new float[]{0f, 1f, 0f});       // green
-        tempMap.put("33", new float[]{1f, 1f, 0f});       // yellow
-        tempMap.put("34", new float[]{0f, 0f, 1f});       // blue
-        tempMap.put("35", new float[]{1f, 0f, 1f});       // magenta
-        tempMap.put("36", new float[]{0f, 1f, 1f});       // cyan
-        tempMap.put("37", new float[]{1f, 1f, 1f});       // white
-        COLOR_MAP = Collections.unmodifiableMap(tempMap);
+        // white
+        COLOR_MAP = Map.of("30", new float[]{0f, 0f, 0f},       // black
+                "31", new float[]{1f, 0f, 0f},       // red
+                "32", new float[]{0f, 1f, 0f},       // green
+                "33", new float[]{1f, 1f, 0f},       // yellow
+                "34", new float[]{0f, 0f, 1f},       // blue
+                "35", new float[]{1f, 0f, 1f},       // magenta
+                "36", new float[]{0f, 1f, 1f},       // cyan
+                "37", new float[]{1f, 1f, 1f});
     }
 
     public static void main(String[] args) {
@@ -69,7 +70,7 @@ public class Stdout2pdf2 implements Runnable {
         if (inputFile != null) {
             br = new BufferedReader(new FileReader(inputFile));
         } else {
-            br = new BufferedReader(new InputStreamReader(System.in));
+            br = new BufferedReader(new InputStreamReader(System.in, UTF_8));
         }
         try {
             allLines = PageMaker.makeLines(br);
