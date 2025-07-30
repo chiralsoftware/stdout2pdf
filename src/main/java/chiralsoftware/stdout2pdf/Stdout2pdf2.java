@@ -58,7 +58,7 @@ public class Stdout2pdf2 implements Runnable {
         try {
             final List<Line> allLines = readInput();
             generatePdf(allLines);
-            System.out.println("PDF generated: " + outputFile);
+            System.out.println("PS generated: " + outputFile);
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
         }
@@ -213,7 +213,7 @@ public class Stdout2pdf2 implements Runnable {
         final List<Chunk> chunks = line.chunks();
         for(Chunk c : chunks) {
             final Color color = c.color();
-            currentContent.write(String.format("%.1f %.1f %.1f rg\n(%s) Tj\n", 
+            currentContent.write(String.format("%.1f %.1f %.1f rg\n(%s) Tj\n",
                     color.r(), color.g(), color.b(), 
                     escapeString(c.text())).getBytes());
         }

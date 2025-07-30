@@ -4,6 +4,8 @@ import static chiralsoftware.stdout2pdf.Color.BLACK;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+
+import static chiralsoftware.stdout2pdf.Color.RED;
 import static java.util.Collections.unmodifiableList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -18,7 +20,7 @@ public class PageMaker {
     private static final int lineLength = 80;
     private static final int tabWidth = 8;
     
-    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[[;\\d]*m");
+    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[[;\\d]*[A-Za-z]");
 
     private static int lengthOfLineOfChunks(List<Chunk> chunks) {
         int result = 0;
@@ -52,25 +54,29 @@ public class PageMaker {
             while (matcher.find()) {
                 // Add the text before the delimiter
                 final String fixed = fixTabs(s.substring(lastEnd, matcher.start()), offset);
-                result.add(new StringToken(fixed));
+                if(! fixed.isEmpty()) result.add(new StringToken(fixed));
+
                 offset += fixed.length();
                 // Add the captured delimiter
-                result.add(new ColorToken(matcher.group(0))); 
-//                out.println("color token here...");
+                final String matchedAnsi = matcher.group(0);
+                if(isVisibleAnsi(matchedAnsi)) result.add(new ColorToken(matchedAnsi));
                 lastEnd = matcher.end();
             }
             // Add any remaining text after the last delimiter
             final String remainder = s.substring(lastEnd);
             if(! remainder.isEmpty()) {
                 final StringToken remainderToken = new StringToken(fixTabs(remainder, offset));
-//            out.println(counter + " -- remainder = " + remainder + ", length: " + remainder.length() +
-//                    " and remainderToken is: " + remainderToken.string().length());
-            
+
                 result.add(remainderToken);
             }
             counter++;
 
             return result;
+    }
+
+    /** This should pick out ANSI codes which will be ignored - essentially cursor movement codes */
+    private static boolean isVisibleAnsi(String ansiString) {
+        return ! ansiString.substring(ansiString.indexOf("[")).equals("[K");
     }
 
     /** Take a single input string, which is one line, and split to possibly
