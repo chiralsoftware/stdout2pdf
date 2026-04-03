@@ -1,10 +1,15 @@
 package chiralsoftware.stdout2pdf;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.InputStreamReader;
+import java.util.regex.Pattern;
+
 import static java.lang.System.exit;
 import static java.lang.System.out;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.regex.Pattern.compile;
 
 public final class checkit {
     
@@ -34,24 +39,50 @@ public final class checkit {
     }
    
     public static void main(String[] args) throws Exception {
-        if(args.length != 4) usage();
+        if(args.length < 4) usage();
+
         String emptyMessage = null;
         String presentMessage = null;
+        String filePath = null;
+        String grepPattern = null;
+
         for(int i = 0; i < args.length; i++) {
-            if(args[i].equalsIgnoreCase("--empty")) {
-                emptyMessage = args[i + 1];
-                i++;
-            } else if(args[i].equalsIgnoreCase("--present")) {
-                presentMessage = args[i + 1];
-                i++;
+            switch(args[i]) {
+                case "--empty": emptyMessage = args[++i]; break;
+                case "--present": presentMessage = args[++i]; break;
+                case "--grep": grepPattern = args[++i]; break;
+                case "--file": filePath = args[++i]; break;
+                default: usage();
             }
         }
         if(emptyMessage == null || presentMessage == null) usage();
-        final BufferedReader br = new BufferedReader(new InputStreamReader(System.in, UTF_8));
+
+        final File file;
+        if(filePath == null) {
+            file = null;
+        } else {
+            file = new File(filePath);
+            if(! file.exists()) {
+                out.println("file: " + file + " not found");
+                exit(1);
+            }
+            if(! file.canRead()) {
+                out.println("file: " + file + " can't read");
+                exit(1);
+            }
+            if(file.isDirectory()) {
+                out.println("file: " + file + " is a directory");
+                exit(1);
+            }
+        }
+        final BufferedReader br =
+                new BufferedReader(new InputStreamReader(file == null ? System.in : new FileInputStream(file), UTF_8));
         final StringBuilder result = new StringBuilder();
         int lines = 0;
         String line;
+        final Pattern grep = grepPattern == null ? null : compile(grepPattern);
         while((line = br.readLine()) != null) {
+            if (grep != null && !grep.matcher(line).find()) continue;
             if(lines <= 5) result.append(abbreviate(line)).append("\n");
             lines++;
         }

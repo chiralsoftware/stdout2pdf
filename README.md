@@ -12,3 +12,11 @@ For an exmaple of use to turn ANSI-colored script output to a PDF:
 Take stdout and turn it into a PDF. This supports ANSI color and fonts. It allows setting
 page sizes and margins. It is designed to be compiled to native with graalvm
 
+# checkit
+
+This is for checking config files for presence:
+
+    checkit --file /etc/ssh/sshd_config \
+    --grep '^PasswordAuthentication no$' \
+    --present 'password auth disabled' \
+    --empty 'WARN: password auth still enabled'
